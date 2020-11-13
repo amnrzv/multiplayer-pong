@@ -1,7 +1,7 @@
 var express = require("express");
 var app = express();
 var server = require("http").Server(app);
-var io = require("socket.io").listen(server);
+var io = require("socket.io").listen(server, { pingInterval: 2000 });
 var players = {};
 var playersArray = [];
 
@@ -46,14 +46,14 @@ io.on("connection", function (socket) {
     // emit a message to all players to remove this player
     io.emit("disconnect", socket.id);
 
-    console.log('total players: ', playersArray.length)
+    console.log("total players: ", playersArray.length);
   });
 
-  socket.on("gameStart", () => {
-    console.log("start game");
-    // emit a message to all players to remove this player
-    io.emit("gameStarted");
-  });
+  socket.on("startParams", () => {
+    const velocityX = 100 + 100 * Math.random();
+    const velocityY = -100 + 200 * Math.random();
+    io.emit("gameStarted", velocityX, velocityY)
+  })
 
   socket.on("playerMove", function (yValue) {
     // emit a message to other players about the player that moved

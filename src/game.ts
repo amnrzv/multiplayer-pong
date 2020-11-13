@@ -19,6 +19,7 @@ var firstPlayerId;
 var opponentId;
 var playersList = {};
 var timer;
+var latency;
 
 interface IDemo {
   socket: any;
@@ -49,8 +50,10 @@ export default class Demo extends Phaser.Scene implements IDemo {
 
         for (const playerId of Object.keys(players)) {
           if (players[playerId].color === "blue") {
+            players[playerId].color = "blue"
             players[playerId].paddle = playerBlue;
           } else {
+            players[playerId].color = "red"
             players[playerId].paddle = playerRed;
           }
 
@@ -63,7 +66,23 @@ export default class Demo extends Phaser.Scene implements IDemo {
       }
     });
 
-    this.socket.on("gameStarted", () => {
+    this.socket.on("pong", function (ms) {
+      latency = ms;
+      console.log(ms);
+    });
+
+    this.socket.on("gameStarted", (vX, vY) => {
+      velocityX = vX;
+      velocityY = vY;
+      ball.x = 400;
+      ball.y = 200;
+      playerBlue.x = 780;
+      playerBlue.y = 200;
+      playerRed.x = 20;
+      playerRed.y = 200;
+      ball.setVelocityX(vX);
+      ball.setVelocityY(vY);
+
       gameStarted = true;
     });
 
@@ -113,9 +132,6 @@ export default class Demo extends Phaser.Scene implements IDemo {
       fontSize: "16px",
       fill: "#00F",
     });
-
-    clearInterval(timer);
-    timer = setInterval(() => this.ballSync(this), 200);
   }
 
   update() {
@@ -125,7 +141,12 @@ export default class Demo extends Phaser.Scene implements IDemo {
 
     if (!gameStarted && !waitForPlayers) {
       this.reset();
-      gameStarted = true;
+      clearInterval(timer);
+      console.log('first player', firstPlayerId)
+      console.log(playersList[firstPlayerId])
+      if (playersList[firstPlayerId].color === "red") {
+        timer = setInterval(() => this.ballSync(this), 200);
+      }
       return;
     }
 
@@ -162,7 +183,7 @@ export default class Demo extends Phaser.Scene implements IDemo {
   }
 
   hitPaddle(ball) {
-    velocityX = velocityX + 10;
+    velocityX = velocityX + Math.sign(velocityX) * 30;
     velocityX = velocityX * -1;
     ball.setVelocityX(velocityX);
 
@@ -172,22 +193,22 @@ export default class Demo extends Phaser.Scene implements IDemo {
   }
 
   ballSync(that) {
-    that.socket.emit("ballMove", ball.x, ball.y, ball.body.velocity.x, ball.body.velocity.y);
+    console.log("BALL SYNC")
+    if (ball.x > 500 || ball.x < 200) {
+      return
+    }
+
+    that.socket.emit(
+      "ballMove",
+      ball.x + (ball.body.velocity.x * latency) / 1000,
+      ball.y + (ball.body.velocity.y * latency) / 1000,
+      ball.body.velocity.x,
+      ball.body.velocity.y
+    );
   }
 
   reset() {
-    velocityX = Phaser.Math.Between(100, 200);
-    velocityY = Phaser.Math.Between(-100, 100);
-    ball.x = 400;
-    ball.y = 200;
-    playerBlue.x = 780;
-    playerBlue.y = 200;
-    playerRed.x = 20;
-    playerRed.y = 200;
-    ball.setVelocityX(velocityX);
-    ball.setVelocityY(velocityY);
-
-    this.socket.emit("ballMove", 400, 200, velocityX, velocityY);
+    this.socket.emit("startParams");
   }
 }
 
