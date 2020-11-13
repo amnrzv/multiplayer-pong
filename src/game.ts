@@ -1,9 +1,8 @@
 import "phaser";
 
 var cursor;
-var player;
-
-var pc;
+var playerBlue;
+var playerRed;
 
 var ball;
 
@@ -14,10 +13,19 @@ var scorePlayer = 0;
 var scorePc = 0;
 var scoreTextPlayer;
 var scoreTextPc;
-var keyW;
-var keyS;
+var waitForPlayers = true;
+var gameStarted = false;
+var firstPlayerId;
+var opponentId;
+var playersList = {};
+var timer;
 
-export default class Demo extends Phaser.Scene {
+interface IDemo {
+  socket: any;
+}
+
+export default class Demo extends Phaser.Scene implements IDemo {
+  socket;
   constructor() {
     super("demo");
   }
@@ -30,32 +38,72 @@ export default class Demo extends Phaser.Scene {
   }
 
   create() {
+    this.socket = io();
+
+    this.socket.on("currentPlayers", function (players) {
+      if (Object.keys(players).length !== 2) {
+        waitForPlayers = true;
+        console.log("WAITING FOR OPPONENT");
+      } else {
+        waitForPlayers = false;
+
+        for (const playerId of Object.keys(players)) {
+          if (players[playerId].color === "blue") {
+            players[playerId].paddle = playerBlue;
+          } else {
+            players[playerId].paddle = playerRed;
+          }
+
+          if (playerId !== firstPlayerId) {
+            opponentId = playerId;
+          }
+        }
+
+        playersList = players;
+      }
+    });
+
+    this.socket.on("gameStarted", () => {
+      gameStarted = true;
+    });
+
+    this.socket.on("playerCreated", function (playerId) {
+      firstPlayerId = playerId;
+    });
+
+    this.socket.on("playerMoved", function (paddleY) {
+      playersList[opponentId].paddle.y = paddleY;
+    });
+
+    this.socket.on("ballMoved", function (pX, pY, vX, vY) {
+      ball.x = pX;
+      ball.y = pY;
+      velocityX = vX;
+      velocityY = vY;
+      ball.setVelocityX(vX);
+      ball.setVelocityY(vY);
+    });
+
     this.add.image(400, 200, "ground");
 
     cursor = this.input.keyboard.createCursorKeys();
-    console.log(cursor);
 
-    keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
-    keyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+    playerBlue = this.physics.add.sprite(780, 200, "player");
+    playerBlue.setImmovable(true);
+    playerBlue.setCollideWorldBounds(true);
 
-    player = this.physics.add.sprite(780, 200, "player");
-    player.setCollideWorldBounds(true);
-
-    pc = this.physics.add.sprite(20, 200, "pc");
-    pc.setCollideWorldBounds(true);
+    playerRed = this.physics.add.sprite(20, 200, "pc");
+    playerRed.setImmovable(true);
+    playerRed.setCollideWorldBounds(true);
 
     ball = this.physics.add.sprite(400, 200, "ball");
 
     ball.setCollideWorldBounds(true);
     ball.setBounce(1);
 
-    //it do horizontal and vertical movement.
-    ball.setVelocityY(velocityY);
-    ball.setVelocityX(velocityX);
-
     //in createGame()
-    this.physics.add.collider(ball, player, this.hitPlayer, null, this);
-    this.physics.add.collider(ball, pc, this.hitPc, null, this);
+    this.physics.add.collider(ball, playerBlue, this.hitPaddle, null, this);
+    this.physics.add.collider(ball, playerRed, this.hitPaddle, null, this);
 
     scoreTextPc = this.add.text(16, 16, "score: 0", {
       fontSize: "16px",
@@ -65,23 +113,28 @@ export default class Demo extends Phaser.Scene {
       fontSize: "16px",
       fill: "#00F",
     });
+
+    clearInterval(timer);
+    timer = setInterval(() => this.ballSync(this), 200);
   }
 
   update() {
-    if (cursor.up.isDown) {
-      player.setVelocityY(-150);
-    } else if (cursor.down.isDown) {
-      player.setVelocityY(150);
-    } else {
-      player.setVelocityY(0);
+    if (!firstPlayerId || !opponentId) {
+      return;
     }
 
-    if (keyW.isDown) {
-      pc.setVelocityY(-150);
-    } else if (keyS.isDown) {
-      pc.setVelocityY(150);
+    if (!gameStarted && !waitForPlayers) {
+      this.reset();
+      gameStarted = true;
+      return;
+    }
+
+    if (cursor.up.isDown) {
+      playersList[firstPlayerId].paddle.setVelocityY(-150);
+    } else if (cursor.down.isDown) {
+      playersList[firstPlayerId].paddle.setVelocityY(150);
     } else {
-      pc.setVelocityY(0);
+      playersList[firstPlayerId].paddle.setVelocityY(0);
     }
 
     if (ball.x == 796) {
@@ -95,46 +148,46 @@ export default class Demo extends Phaser.Scene {
       scoreTextPlayer.setText("Score: " + scorePlayer);
       this.reset();
     }
+
+    if (
+      gameStarted &&
+      playersList[firstPlayerId].paddle.prevY !==
+        playersList[firstPlayerId].paddle.y
+    ) {
+      this.socket.emit("playerMove", playersList[firstPlayerId].paddle.y);
+    }
+
+    playersList[firstPlayerId].paddle.prevY =
+      playersList[firstPlayerId].paddle.y;
   }
 
-  hitPlayer(ball, player) {
-    velocityX = velocityX + 50;
+  hitPaddle(ball) {
+    velocityX = velocityX + 10;
     velocityX = velocityX * -1;
-    console.log(velocityX);
-
     ball.setVelocityX(velocityX);
 
-    if (velocityY < 0) {
-      velocityY = velocityY * -1;
-      ball.setVelocityY(velocityY);
-    }
-    player.setVelocityX(-1);
+    velocityY = ball.body.velocity.y;
+    ball.setVelocityY(velocityY);
+    this.socket.emit("ballMove", ball.x, ball.y, velocityX, velocityY);
   }
 
-  hitPc(ball, pc) {
-    velocityX = velocityX - 50;
-    velocityX = velocityX * -1;
-    console.log(velocityX);
-    ball.setVelocityX(velocityX);
-
-    if (velocityY < 0) {
-      velocityY = velocityY * -1;
-      ball.setVelocityY(velocityY);
-    }
-    pc.setVelocityX(1);
+  ballSync(that) {
+    that.socket.emit("ballMove", ball.x, ball.y, ball.body.velocity.x, ball.body.velocity.y);
   }
 
   reset() {
-    velocityX = Phaser.Math.Between(-100, 100);
-    velocityY = 100;
+    velocityX = Phaser.Math.Between(100, 200);
+    velocityY = Phaser.Math.Between(-100, 100);
     ball.x = 400;
     ball.y = 200;
-    player.x = 780;
-    player.y = 200;
-    pc.x = 20;
-    pc.y = 200;
+    playerBlue.x = 780;
+    playerBlue.y = 200;
+    playerRed.x = 20;
+    playerRed.y = 200;
     ball.setVelocityX(velocityX);
     ball.setVelocityY(velocityY);
+
+    this.socket.emit("ballMove", 400, 200, velocityX, velocityY);
   }
 }
 
