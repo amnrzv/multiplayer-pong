@@ -6,11 +6,14 @@ const server = require("http").Server(app);
 const io = require("socket.io").listen(server, { pingInterval: 1000 });
 const playersWithRooms = {};
 const playersRoomMap = {};
+const BALL_SPEED_X_MIN = 120;
+const BALL_SPEED_X_MAX = 240;
+const BALL_SPEED_Y_MIN = 30;
+const BALL_SPEED_Y_MAX = 60;
 
 app.use(express.static("./dist"));
 
 app.get("/:path", function (req, res) {
-
   res.sendFile("index.html", { root: path.join(__dirname, "../dist") });
 });
 
@@ -58,8 +61,10 @@ io.on("connection", function (socket) {
   });
 
   socket.on("startParams", () => {
-    const velocityX = 100 + 100 * Math.random();
-    const velocityY = -100 + 200 * Math.random();
+    const directionX = Math.random() < 0.5 ? 1 : -1;
+    const directionY = Math.random() < 0.5 ? 1 : -1;
+    const velocityX = directionX * (BALL_SPEED_X_MIN + BALL_SPEED_X_MAX * Math.random());
+    const velocityY = directionY * (BALL_SPEED_Y_MIN + BALL_SPEED_Y_MAX * Math.random());
     io.in(roomId).emit("gameStarted", velocityX, velocityY);
   });
 

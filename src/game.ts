@@ -1,4 +1,14 @@
 import "phaser";
+import InputTextPlugin from "phaser3-rex-plugins/plugins/inputtext-plugin.js";
+import Menu from "./menu";
+
+const PADDLE_SPEED = 300;
+const BALL_SPEED_INCREMENTS = 50;
+const SYNC_FREQ = 200;
+const SYNC_MARGIN = 200;
+const POINT_EDGE = 4;
+const PADDLE_POS = 20;
+const BALL_MAX_SPEED = 500;
 
 var cursor;
 var playerBlue;
@@ -6,13 +16,13 @@ var playerRed;
 
 var ball;
 
-var velocityX = Phaser.Math.Between(-100, 100);
-var velocityY = 100;
+var velocityX;
+var velocityY;
 
-var scorePlayer = 0;
-var scorePc = 0;
-var scoreTextPlayer;
-var scoreTextPc;
+var scorePlayerBlue = 0;
+var scorePlayerRed = 0;
+var scoreTextPlayerBlue;
+var scoreTextPlayerRed;
 var waitForPlayers = true;
 var gameStarted = false;
 var firstPlayerId;
@@ -21,14 +31,18 @@ var playersList = {};
 var timer;
 var latency;
 
-interface IDemo {
+interface IPong {
   socket: any;
 }
 
-export default class Demo extends Phaser.Scene implements IDemo {
+export default class Pong extends Phaser.Scene implements IPong {
   socket;
   constructor() {
-    super("demo");
+    super("pong");
+  }
+
+  init(data) {
+    console.log(data)
   }
 
   preload() {
@@ -50,10 +64,10 @@ export default class Demo extends Phaser.Scene implements IDemo {
 
         for (const playerId of Object.keys(players)) {
           if (players[playerId].color === "blue") {
-            players[playerId].color = "blue"
+            players[playerId].color = "blue";
             players[playerId].paddle = playerBlue;
           } else {
-            players[playerId].color = "red"
+            players[playerId].color = "red";
             players[playerId].paddle = playerRed;
           }
 
@@ -74,12 +88,12 @@ export default class Demo extends Phaser.Scene implements IDemo {
     this.socket.on("gameStarted", (vX, vY) => {
       velocityX = vX;
       velocityY = vY;
-      ball.x = 400;
-      ball.y = 200;
-      playerBlue.x = 780;
-      playerBlue.y = 200;
-      playerRed.x = 20;
-      playerRed.y = 200;
+      ball.x = this.game.canvas.width / 2;
+      ball.y = this.game.canvas.height / 2;
+      playerBlue.x = this.game.canvas.width - PADDLE_POS;
+      playerBlue.y = this.game.canvas.height / 2;
+      playerRed.x = PADDLE_POS;
+      playerRed.y = this.game.canvas.height / 2;
       ball.setVelocityX(vX);
       ball.setVelocityY(vY);
 
@@ -103,19 +117,29 @@ export default class Demo extends Phaser.Scene implements IDemo {
       ball.setVelocityY(vY);
     });
 
-    this.add.image(400, 200, "ground");
-
     cursor = this.input.keyboard.createCursorKeys();
 
-    playerBlue = this.physics.add.sprite(780, 200, "player");
+    playerBlue = this.physics.add.sprite(
+      this.game.canvas.width - PADDLE_POS,
+      this.game.canvas.height / 2,
+      "player"
+    );
     playerBlue.setImmovable(true);
     playerBlue.setCollideWorldBounds(true);
 
-    playerRed = this.physics.add.sprite(20, 200, "pc");
+    playerRed = this.physics.add.sprite(
+      PADDLE_POS,
+      this.game.canvas.height / 2,
+      "pc"
+    );
     playerRed.setImmovable(true);
     playerRed.setCollideWorldBounds(true);
 
-    ball = this.physics.add.sprite(400, 200, "ball");
+    ball = this.physics.add.sprite(
+      this.game.canvas.width / 2,
+      this.game.canvas.height / 2,
+      "ball"
+    );
 
     ball.setCollideWorldBounds(true);
     ball.setBounce(1);
@@ -124,14 +148,16 @@ export default class Demo extends Phaser.Scene implements IDemo {
     this.physics.add.collider(ball, playerBlue, this.hitPaddle, null, this);
     this.physics.add.collider(ball, playerRed, this.hitPaddle, null, this);
 
-    scoreTextPc = this.add.text(16, 16, "score: 0", {
+    scoreTextPlayerRed = this.add.text(16, 16, "score: 0", {
       fontSize: "16px",
-      fill: "#F00",
+      fill: "#FFF",
     });
-    scoreTextPlayer = this.add.text(700, 16, "score: 0", {
-      fontSize: "16px",
-      fill: "#00F",
-    });
+    scoreTextPlayerBlue = this.add
+      .text(this.game.canvas.width - 16, 16, "score: 0", {
+        fontSize: "16px",
+        fill: "#FFF",
+      })
+      .setOrigin(1, 0);
   }
 
   update() {
@@ -143,28 +169,28 @@ export default class Demo extends Phaser.Scene implements IDemo {
       this.reset();
       clearInterval(timer);
       if (playersList[firstPlayerId].color === "red") {
-        timer = setInterval(() => this.ballSync(this), 200);
+        timer = setInterval(() => this.ballSync(this), SYNC_FREQ);
       }
       return;
     }
 
     if (cursor.up.isDown) {
-      playersList[firstPlayerId].paddle.setVelocityY(-150);
+      playersList[firstPlayerId].paddle.setVelocityY(-PADDLE_SPEED);
     } else if (cursor.down.isDown) {
-      playersList[firstPlayerId].paddle.setVelocityY(150);
+      playersList[firstPlayerId].paddle.setVelocityY(PADDLE_SPEED);
     } else {
       playersList[firstPlayerId].paddle.setVelocityY(0);
     }
 
-    if (ball.x == 796) {
-      scorePc += 1;
-      scoreTextPc.setText("Score: " + scorePc);
+    if (ball.x == this.game.canvas.width - POINT_EDGE) {
+      scorePlayerRed += 1;
+      scoreTextPlayerRed.setText("Score: " + scorePlayerRed);
       this.reset();
     }
 
-    if (ball.x == 4) {
-      scorePlayer += 1;
-      scoreTextPlayer.setText("Score: " + scorePlayer);
+    if (ball.x == POINT_EDGE) {
+      scorePlayerBlue += 1;
+      scoreTextPlayerBlue.setText("Score: " + scorePlayerBlue);
       this.reset();
     }
 
@@ -181,7 +207,11 @@ export default class Demo extends Phaser.Scene implements IDemo {
   }
 
   hitPaddle(ball) {
-    velocityX = velocityX + Math.sign(velocityX) * 30;
+    velocityX = velocityX + Math.sign(velocityX) * BALL_SPEED_INCREMENTS;
+    if (Math.abs(velocityX) > BALL_MAX_SPEED) {
+      velocityX = Math.sign(velocityX) * BALL_MAX_SPEED;
+    }
+
     velocityX = velocityX * -1;
     ball.setVelocityX(velocityX);
 
@@ -191,9 +221,9 @@ export default class Demo extends Phaser.Scene implements IDemo {
   }
 
   ballSync(that) {
-    console.log("BALL SYNC")
-    if (ball.x > 500 || ball.x < 200) {
-      return
+    console.log("BALL SYNC");
+    if (ball.x > this.game.canvas.width - SYNC_MARGIN || ball.x < SYNC_MARGIN) {
+      return;
     }
 
     that.socket.emit(
@@ -212,13 +242,30 @@ export default class Demo extends Phaser.Scene implements IDemo {
 
 const config = {
   type: Phaser.AUTO,
-  backgroundColor: "#000",
-  width: 800,
-  height: 400,
+  autoCenter: Phaser.Scale.CENTER_BOTH,
+  scale: {
+    parent: "pong-game",
+    mode: Phaser.Scale.ScaleModes.FIT,
+    width: 1200,
+    height: 600,
+  },
+  backgroundColor: "#1E1A25",
   physics: {
     default: "arcade",
   },
-  scene: Demo,
+  dom: {
+    createContainer: true,
+  },
+  plugins: {
+    global: [
+      {
+        key: "rexInputTextPlugin",
+        plugin: InputTextPlugin,
+        start: true,
+      },
+    ],
+  },
+  scene: [Menu, Pong],
 };
 
 const game = new Phaser.Game(config);
