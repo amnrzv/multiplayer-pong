@@ -21,28 +21,40 @@ var velocityY;
 
 var scorePlayerBlue = 0;
 var scorePlayerRed = 0;
-var scoreTextPlayerBlue;
-var scoreTextPlayerRed;
 var waitForPlayers = true;
-var gameStarted = false;
+var gameRunning = false;
 var firstPlayerId;
 var opponentId;
 var playersList = {};
-var timer;
+var userName;
+
 var latency;
+var syncTimer;
+var resetTimeout;
+
+var waitMessage;
+var countdownTimerTimeout;
+var countdownTimerCount = 3;
+var countdownTimerText;
+var playerNameRed;
+var playerNameBlue;
+var scoreTextPlayerRed;
+var scoreTextPlayerBlue;
 
 interface IPong {
   socket: any;
+  userName: string;
 }
 
 export default class Pong extends Phaser.Scene implements IPong {
   socket;
+  userName;
   constructor() {
     super("pong");
   }
 
   init(data) {
-    console.log(data)
+    userName = data.userName;
   }
 
   preload() {
@@ -53,31 +65,94 @@ export default class Pong extends Phaser.Scene implements IPong {
   }
 
   create() {
-    this.socket = io();
+    playerNameRed = this.add.text(16, 16, "PLAYER 1", {
+      fontFamily: "Roboto, sans-serif",
+      fontSize: "16px",
+      fill: "#FFF",
+    });
 
-    this.socket.on("currentPlayers", function (players) {
+    playerNameBlue = this.add
+      .text(this.game.canvas.width - 16, 16, "PLAYER 2", {
+        fontFamily: "Roboto, sans-serif",
+        fontSize: "16px",
+        fill: "#FFF",
+      })
+      .setOrigin(1, 0);
+
+    scoreTextPlayerRed = this.add.text(16, 36, "score: 0", {
+      fontFamily: "Roboto, sans-serif",
+      fontSize: "20px",
+      fill: "#FFF",
+    });
+    scoreTextPlayerBlue = this.add
+      .text(this.game.canvas.width - 16, 36, "score: 0", {
+        fontFamily: "Roboto, sans-serif",
+        fontSize: "20px",
+        fill: "#FFF",
+      })
+      .setOrigin(1, 0);
+
+    waitMessage = this.add
+      .text(this.game.canvas.width / 2, this.game.canvas.height / 2 - 80, "", {
+        fontFamily: "Roboto, sans-serif",
+        fontSize: "40px",
+        fill: "#FF0",
+      })
+      .setOrigin(0.5);
+
+    countdownTimerText = this.add
+      .text(this.game.canvas.width / 2, this.game.canvas.height / 2 - 80, "", {
+        fontFamily: "Roboto, sans-serif",
+        fontSize: "56px",
+        fill: "#FF0",
+      })
+      .setOrigin(0.5);
+
+    this.socket = io({ query: `name=${userName}` });
+
+    this.socket.on("currentPlayers", (players) => {
       if (Object.keys(players).length !== 2) {
         waitForPlayers = true;
         console.log("WAITING FOR OPPONENT");
+        waitMessage.setText("Waiting for another player");
       } else {
+        waitMessage.setText("");
         waitForPlayers = false;
-
         for (const playerId of Object.keys(players)) {
           if (players[playerId].color === "blue") {
             players[playerId].color = "blue";
             players[playerId].paddle = playerBlue;
+            playerNameBlue.setText(players[playerId].userName);
+            scorePlayerBlue = playersList[playerId].score;
           } else {
             players[playerId].color = "red";
             players[playerId].paddle = playerRed;
+            playerNameRed.setText(players[playerId].userName);
+            scorePlayerRed = playersList[playerId].score;
           }
 
           if (playerId !== firstPlayerId) {
             opponentId = playerId;
           }
         }
-
         playersList = players;
       }
+
+      if (firstPlayerId && players[firstPlayerId].color === "red") {
+        playerNameRed.setText(userName);
+      } else {
+        playerNameBlue.setText(userName);
+      }
+    });
+
+    this.socket.on("roomFull", () => {
+      gameRunning = false;
+      waitForPlayers = true;
+      this.resetAllPos();
+      clearInterval(countdownTimerTimeout);
+      clearTimeout(resetTimeout);
+      clearInterval(syncTimer);
+      waitMessage.setText("Room is full!");
     });
 
     this.socket.on("pong", function (ms) {
@@ -88,23 +163,45 @@ export default class Pong extends Phaser.Scene implements IPong {
     this.socket.on("gameStarted", (vX, vY) => {
       velocityX = vX;
       velocityY = vY;
-      ball.x = this.game.canvas.width / 2;
-      ball.y = this.game.canvas.height / 2;
-      playerBlue.x = this.game.canvas.width - PADDLE_POS;
-      playerBlue.y = this.game.canvas.height / 2;
-      playerRed.x = PADDLE_POS;
-      playerRed.y = this.game.canvas.height / 2;
       ball.setVelocityX(vX);
       ball.setVelocityY(vY);
 
-      gameStarted = true;
+      clearInterval(syncTimer);
+      if (playersList[firstPlayerId].color === "red") {
+        syncTimer = setInterval(() => this.ballSync(this), SYNC_FREQ);
+      }
     });
 
-    this.socket.on("playerCreated", function (playerId) {
+    this.socket.on("playerCreated", (playerId) => {
       firstPlayerId = playerId;
     });
 
-    this.socket.on("playerMoved", function (paddleY) {
+    this.socket.on("pointSync", (players) => {
+      for (const playerId of Object.keys(players)) {
+        if (players[playerId].color === "blue") {
+          scorePlayerBlue = playersList[playerId].score;
+          scoreTextPlayerBlue.setText("Score: " + scorePlayerBlue);
+        } else {
+          scorePlayerRed = playersList[playerId].score;
+          scoreTextPlayerRed.setText("Score: " + scorePlayerRed);
+        }
+      }
+
+      playersList = players;
+    });
+
+    this.socket.on("disconnect", () => {
+      gameRunning = false;
+      waitForPlayers = true;
+      this.resetAllPos();
+      clearInterval(countdownTimerTimeout);
+      clearTimeout(resetTimeout);
+      clearInterval(syncTimer);
+      waitMessage.setText("Opponent has disconnected");
+      countdownTimerText.setText("");
+    });
+
+    this.socket.on("playerMoved", (paddleY) => {
       playersList[opponentId].paddle.y = paddleY;
     });
 
@@ -147,17 +244,6 @@ export default class Pong extends Phaser.Scene implements IPong {
     //in createGame()
     this.physics.add.collider(ball, playerBlue, this.hitPaddle, null, this);
     this.physics.add.collider(ball, playerRed, this.hitPaddle, null, this);
-
-    scoreTextPlayerRed = this.add.text(16, 16, "score: 0", {
-      fontSize: "16px",
-      fill: "#FFF",
-    });
-    scoreTextPlayerBlue = this.add
-      .text(this.game.canvas.width - 16, 16, "score: 0", {
-        fontSize: "16px",
-        fill: "#FFF",
-      })
-      .setOrigin(1, 0);
   }
 
   update() {
@@ -165,12 +251,8 @@ export default class Pong extends Phaser.Scene implements IPong {
       return;
     }
 
-    if (!gameStarted && !waitForPlayers) {
-      this.reset();
-      clearInterval(timer);
-      if (playersList[firstPlayerId].color === "red") {
-        timer = setInterval(() => this.ballSync(this), SYNC_FREQ);
-      }
+    if (!gameRunning && !waitForPlayers) {
+      this.startGame();
       return;
     }
 
@@ -184,18 +266,31 @@ export default class Pong extends Phaser.Scene implements IPong {
 
     if (ball.x == this.game.canvas.width - POINT_EDGE) {
       scorePlayerRed += 1;
-      scoreTextPlayerRed.setText("Score: " + scorePlayerRed);
-      this.reset();
+
+      this.pointScored();
+      if (playersList[firstPlayerId].color === "red") {
+        this.socket.emit("pointScored", {
+          color: "red",
+          score: scorePlayerRed,
+        });
+      }
     }
 
     if (ball.x == POINT_EDGE) {
       scorePlayerBlue += 1;
-      scoreTextPlayerBlue.setText("Score: " + scorePlayerBlue);
-      this.reset();
+
+      this.pointScored();
+
+      if (playersList[firstPlayerId].color === "blue") {
+        this.socket.emit("pointScored", {
+          color: "blue",
+          score: scorePlayerBlue,
+        });
+      }
     }
 
     if (
-      gameStarted &&
+      gameRunning &&
       playersList[firstPlayerId].paddle.prevY !==
         playersList[firstPlayerId].paddle.y
     ) {
@@ -235,8 +330,54 @@ export default class Pong extends Phaser.Scene implements IPong {
     );
   }
 
-  reset() {
-    this.socket.emit("startParams");
+  pointScored() {
+    gameRunning = false;
+    this.resetAllPos();
+
+    clearTimeout(resetTimeout);
+    resetTimeout = setTimeout(() => {
+      gameRunning = true;
+      this.socket.emit("startParams");
+    }, 3000);
+  }
+
+  startGame() {
+    gameRunning = true;
+    this.resetAllPos();
+    this.runCountdown();
+
+    clearTimeout(resetTimeout);
+    resetTimeout = setTimeout(() => {
+      this.socket.emit("startParams");
+    }, 3000);
+  }
+
+  runCountdown() {
+    countdownTimerCount = 3;
+    countdownTimerText.setText(countdownTimerCount.toString());
+
+    countdownTimerTimeout = setInterval(() => {
+      countdownTimerCount--;
+      countdownTimerText.setText(countdownTimerCount.toString());
+
+      if (countdownTimerCount < 1) {
+        countdownTimerText.setText("");
+        clearInterval(countdownTimerTimeout);
+      }
+    }, 1000);
+  }
+
+  resetAllPos() {
+    playerBlue.x = this.game.canvas.width - PADDLE_POS;
+    playerBlue.y = this.game.canvas.height / 2;
+    playerRed.x = PADDLE_POS;
+    playerRed.y = this.game.canvas.height / 2;
+
+    ball.x = this.game.canvas.width / 2;
+    ball.y = this.game.canvas.height / 2;
+
+    ball.setVelocityX(0);
+    ball.setVelocityY(0);
   }
 }
 
