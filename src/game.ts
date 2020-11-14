@@ -142,8 +142,6 @@ export default class Demo extends Phaser.Scene implements IDemo {
     if (!gameStarted && !waitForPlayers) {
       this.reset();
       clearInterval(timer);
-      console.log('first player', firstPlayerId)
-      console.log(playersList[firstPlayerId])
       if (playersList[firstPlayerId].color === "red") {
         timer = setInterval(() => this.ballSync(this), 200);
       }
