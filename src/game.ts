@@ -7,7 +7,7 @@ const BALL_SPEED_INCREMENTS = 50;
 const SYNC_FREQ = 800;
 const SYNC_MARGIN = 200;
 const POINT_EDGE = 4;
-const PADDLE_POS = 20;
+const PADDLE_POS = 50;
 const BALL_MAX_SPEED = 500;
 const MAX_POINTS = 10;
 
