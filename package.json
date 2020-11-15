@@ -4,11 +4,14 @@
     "description": "A Phaser 3 Project Template using Rollup and TypeScript",
     "main": "src/game.ts",
     "scripts": {
-        "dev": "rollup --config rollup.config.dev.js",
-        "build": "rollup --config rollup.config.dist.js",
-        "watch": "rollup --watch --config rollup.config.dev.js",
-        "start": "ts-node-dev ./server/index.ts",
-        "start-dev-server": "concurrently --kill-others \"npm run watch\" \"npm run start-server\""
+        "dev:client": "rollup --config rollup.client.dev.js",
+        "watch:client": "rollup --watch --config rollup.client.dev.js",
+        "build:client": "rollup --config rollup.client.dist.js",
+        "build:server": "rollup --config rollup.server.dist.js",
+        "start-server": "ts-node-dev ./server/index.ts",
+        "start-dev": "concurrently --kill-others \"npm run watch\" \"npm run start-server\"",
+        "build": "npm run build:client && build:server",
+        "start": "node ./dist/server.js",
     },
     "repository": {
         "type": "git",
@@ -25,8 +28,7 @@
         "phaser3-rex-plugins": "^1.1.31",
         "socket.io": "^2.3.0",
         "socket.io-client": "^2.3.0",
-        "uuid": "^8.3.1",
-        "ts-node-dev": "^1.0.0"
+        "uuid": "^8.3.1"
     },
     "devDependencies": {
         "@rollup/plugin-replace": "^2.3.0",
@@ -38,6 +40,7 @@
         "rollup-plugin-serve": "^1.0.1",
         "rollup-plugin-typescript2": "^0.25.3",
         "rollup-plugin-uglify": "^6.0.4",
+        "ts-node-dev": "^1.0.0",
         "typescript": "^3.7.4"
     }
 }

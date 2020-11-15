@@ -1,6 +1,5 @@
 const express = require("express");
 const path = require("path");
-const { v4: uuidv4 } = require("uuid");
 const app = express();
 const server = require("http").Server(app);
 const io = require("socket.io").listen(server, { pingInterval: 1000 });
@@ -21,7 +20,6 @@ io.on("connection", (socket) => {
   const roomId = new URL(socket.request.headers.referer).pathname.slice(1);
   playersRoomMap[socket.id] = roomId;
 
-  console.log("ROOM", roomId);
   socket.join(roomId);
 
   if (roomId && !playersWithRooms[roomId]) {
@@ -36,7 +34,7 @@ io.on("connection", (socket) => {
     };
   }
 
-  if (Object.keys(playersWithRooms[roomId]).length > 2) {
+  if (roomId.length === 0 || Object.keys(playersWithRooms[roomId]).length > 2) {
     delete playersWithRooms[roomId][socket.id];
     socket.emit("roomFull");
     socket.disconnect();
