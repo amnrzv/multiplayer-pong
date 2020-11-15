@@ -325,9 +325,9 @@ export default class Pong extends Phaser.Scene implements IPong {
 
     if (ball.x == this.game.canvas.width - POINT_EDGE) {
       scorePlayerRed += 1;
+      this.pointScored();
 
       if (playersList[firstPlayerId].color === "red") {
-        this.pointScored();
         this.socket.emit("pointScored", {
           color: "red",
           score: scorePlayerRed,
@@ -343,9 +343,9 @@ export default class Pong extends Phaser.Scene implements IPong {
 
     if (ball.x == POINT_EDGE) {
       scorePlayerBlue += 1;
+      this.pointScored();
 
       if (playersList[firstPlayerId].color === "blue") {
-        this.pointScored();
         this.socket.emit("pointScored", {
           color: "blue",
           score: scorePlayerBlue,
@@ -419,11 +419,13 @@ export default class Pong extends Phaser.Scene implements IPong {
     clearInterval(countdownTimerTimeout);
     this.runCountdown();
 
-    clearTimeout(gameStartTimeout);
-    gameStartTimeout = setTimeout(() => {
-      gameRunning = true;
-      this.socket.emit("startParams");
-    }, 3000);
+    if (playersList[firstPlayerId].color === "red") {
+      clearTimeout(gameStartTimeout);
+      gameStartTimeout = setTimeout(() => {
+        gameRunning = true;
+        this.socket.emit("startParams");
+      }, 3000);
+    }
   }
 
   restartGame() {
