@@ -367,7 +367,7 @@ export default class Pong extends Phaser.Scene implements IPong {
       playersList[firstPlayerId].paddle.y;
   }
 
-  hitPaddle(ball) {
+  hitPaddle() {
     velocityX = velocityX + Math.sign(velocityX) * BALL_SPEED_INCREMENTS;
     if (Math.abs(velocityX) > BALL_MAX_SPEED) {
       velocityX = Math.sign(velocityX) * BALL_MAX_SPEED;
