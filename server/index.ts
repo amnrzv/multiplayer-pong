@@ -82,8 +82,8 @@ io.on("connection", (socket) => {
 
   socket.on("restartGame", ({ playerId }) => {
     playersWithRooms[roomId][playerId].restart = true;
-    
-    console.log(playersInThisRoom)
+
+    console.log(playersInThisRoom);
     console.log(playersWithRooms[roomId]);
     const allReady = playersInThisRoom.every(
       (id) => playersWithRooms[roomId][id].restart
@@ -124,6 +124,7 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(8081, () => {
+const port = process.env.PORT || 8081;
+server.listen(port, () => {
   console.log(`Listening on ${server.address().port}`);
 });
