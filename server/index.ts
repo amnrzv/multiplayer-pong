@@ -6,10 +6,10 @@ const server = require("http").Server(app);
 const io = require("socket.io").listen(server, { pingInterval: 1000 });
 const playersWithRooms = {};
 const playersRoomMap = {};
-const BALL_SPEED_X_MIN = 120;
+const BALL_SPEED_X_MIN = 180;
 const BALL_SPEED_X_MAX = 240;
-const BALL_SPEED_Y_MIN = 30;
-const BALL_SPEED_Y_MAX = 60;
+const BALL_SPEED_Y_MIN = 60;
+const BALL_SPEED_Y_MAX = 90;
 
 app.use(express.static("./dist"));
 
@@ -36,21 +36,21 @@ io.on("connection", (socket) => {
     };
   }
 
-  console.log("PLAYERS", playersWithRooms[roomId]);
-
   if (Object.keys(playersWithRooms[roomId]).length > 2) {
     delete playersWithRooms[roomId][socket.id];
     socket.emit("roomFull");
     socket.disconnect();
   }
 
-  const playersInThisRoom = Object.keys(playersWithRooms[roomId])
+  let playersInThisRoom = Object.keys(playersWithRooms[roomId]);
 
   for (let i = 0; i < playersInThisRoom.length; i++) {
     const playerId = playersInThisRoom[i];
     playersWithRooms[roomId][playerId].color = i === 1 ? "blue" : "red";
     playersWithRooms[roomId][playerId].score = 0;
   }
+
+  // console.log("PLAYERS", playersWithRooms[roomId]);
 
   // send the id back to the client
   socket.emit("playerCreated", socket.id);
@@ -61,17 +61,9 @@ io.on("connection", (socket) => {
   // update all other players of the new player
   socket.to(roomId).emit("newPlayer", socket.id);
 
-  socket.on("disconnect", () => {
-    console.log("user disconnected");
-    // remove this player from our players object
-    delete playersWithRooms[roomId][socket.id];
-
-    // emit a message to all players to remove this player
-    io.in(roomId).emit("disconnect", socket.id);
-  });
-
   socket.on("pointScored", ({ color, score }) => {
-    console.log(color, score);
+    playersInThisRoom = Object.keys(playersWithRooms[roomId]);
+
     for (let i = 0; i < playersInThisRoom.length; i++) {
       const playerId = playersInThisRoom[i];
       if (playersWithRooms[roomId][playerId].color === color) {
@@ -79,7 +71,29 @@ io.on("connection", (socket) => {
       }
     }
 
-    io.in(roomId).emit("pointSync", playersWithRooms[roomId])
+    io.in(roomId).emit("pointSync", playersWithRooms[roomId]);
+  });
+
+  socket.on("gameOver", ({ winner }) => {
+    playersInThisRoom.forEach((id) => {
+      playersWithRooms[roomId][id].score = 0;
+      playersWithRooms[roomId][id].restart = false;
+    });
+    io.in(roomId).emit("winner", winner);
+  });
+
+  socket.on("restartGame", ({ playerId }) => {
+    playersWithRooms[roomId][playerId].restart = true;
+    
+    console.log(playersInThisRoom)
+    console.log(playersWithRooms[roomId]);
+    const allReady = playersInThisRoom.every(
+      (id) => playersWithRooms[roomId][id].restart
+    );
+    console.log("ALL READY -", allReady);
+    if (allReady) {
+      io.in(roomId).emit("allReadyForRestart");
+    }
   });
 
   socket.on("startParams", () => {
@@ -100,6 +114,15 @@ io.on("connection", (socket) => {
   socket.on("ballMove", (posX, posY, velocityX, velocityY) => {
     // emit a message to other players about the ball move
     socket.to(roomId).emit("ballMoved", posX, posY, velocityX, velocityY);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+    // remove this player from our players object
+    delete playersWithRooms[roomId][socket.id];
+
+    // emit a message to all players to remove this player
+    io.in(roomId).emit("disconnect", socket.id);
   });
 });
 

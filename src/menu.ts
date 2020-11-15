@@ -12,7 +12,7 @@ export default class Menu extends Phaser.Scene {
   }
 
   create() {
-    const centerX = this.cameras.main.worldView.x + this.cameras.main.width / 2;
+    const centerX = this.game.canvas.width / 2;
 
     this.add
       .text(centerX, 80, "COSMOS PONG", {
@@ -60,16 +60,12 @@ export default class Menu extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    userName.on('submit', (e) => {
-        console.log('here', e)
-    })
-
     startGameBtn.on("pointerover", () => {
-      startGameBtn.setFillStyle(0x84b82f, 0.8);
+      startGameBtn.setFillStyle(0x70982D);
     });
 
     startGameBtn.on("pointerout", () => {
-      startGameBtn.setFillStyle(0x84b82f, 1);
+      startGameBtn.setFillStyle(0x84b82f);
     });
 
     startGameBtn.on("pointerup", () => {

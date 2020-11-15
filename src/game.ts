@@ -9,6 +9,7 @@ const SYNC_MARGIN = 200;
 const POINT_EDGE = 4;
 const PADDLE_POS = 20;
 const BALL_MAX_SPEED = 500;
+const MAX_POINTS = 10;
 
 var cursor;
 var playerBlue;
@@ -30,7 +31,7 @@ var userName;
 
 var latency;
 var syncTimer;
-var resetTimeout;
+var gameStartTimeout;
 
 var waitMessage;
 var countdownTimerTimeout;
@@ -40,6 +41,9 @@ var playerNameRed;
 var playerNameBlue;
 var scoreTextPlayerRed;
 var scoreTextPlayerBlue;
+
+let restartGameBtn;
+let restartGameText;
 
 interface IPong {
   socket: any;
@@ -65,35 +69,37 @@ export default class Pong extends Phaser.Scene implements IPong {
   }
 
   create() {
-    playerNameRed = this.add.text(16, 16, "PLAYER 1", {
+    const centerX = this.game.canvas.width / 2;
+    playerNameRed = this.add.text(40, 16, "PLAYER 1", {
       fontFamily: "Roboto, sans-serif",
-      fontSize: "16px",
+      fontSize: "24px",
       fill: "#FFF",
     });
 
     playerNameBlue = this.add
-      .text(this.game.canvas.width - 16, 16, "PLAYER 2", {
+      .text(this.game.canvas.width - 40, 16, "PLAYER 2", {
         fontFamily: "Roboto, sans-serif",
-        fontSize: "16px",
+        fontSize: "24px",
         fill: "#FFF",
       })
       .setOrigin(1, 0);
 
-    scoreTextPlayerRed = this.add.text(16, 36, "score: 0", {
+    scoreTextPlayerRed = this.add.text(250, 16, `0/${MAX_POINTS}`, {
       fontFamily: "Roboto, sans-serif",
-      fontSize: "20px",
+      fontSize: "24px",
       fill: "#FFF",
     });
+
     scoreTextPlayerBlue = this.add
-      .text(this.game.canvas.width - 16, 36, "score: 0", {
+      .text(this.game.canvas.width - 250, 16, `0/${MAX_POINTS}`, {
         fontFamily: "Roboto, sans-serif",
-        fontSize: "20px",
+        fontSize: "24px",
         fill: "#FFF",
       })
       .setOrigin(1, 0);
 
     waitMessage = this.add
-      .text(this.game.canvas.width / 2, this.game.canvas.height / 2 - 80, "", {
+      .text(centerX, this.game.canvas.height / 2 - 80, "", {
         fontFamily: "Roboto, sans-serif",
         fontSize: "40px",
         fill: "#FF0",
@@ -101,19 +107,48 @@ export default class Pong extends Phaser.Scene implements IPong {
       .setOrigin(0.5);
 
     countdownTimerText = this.add
-      .text(this.game.canvas.width / 2, this.game.canvas.height / 2 - 80, "", {
+      .text(centerX, this.game.canvas.height / 2 - 80, "", {
         fontFamily: "Roboto, sans-serif",
         fontSize: "56px",
         fill: "#FF0",
       })
       .setOrigin(0.5);
 
+    restartGameBtn = this.add
+      .rectangle(centerX, 300, 400, 60, 0x84b82f)
+      .setOrigin(0.5)
+      .setInteractive({ cursor: "pointer" })
+      .setVisible(false)
+      .setDepth(5);
+
+    restartGameText = this.add
+      .text(centerX, 300, "PLAY AGAIN", {
+        fontFamily: "Roboto, sans-serif",
+        fontSize: "24px",
+        fill: "#000",
+        fontStyle: "normal",
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
+      .setDepth(6);
+
+    restartGameBtn.on("pointerover", () => {
+      restartGameBtn.setFillStyle(0x70982d);
+    });
+
+    restartGameBtn.on("pointerout", () => {
+      restartGameBtn.setFillStyle(0x84b82f);
+    });
+
+    restartGameBtn.on("pointerup", () => {
+      this.restartGame();
+    });
+
     this.socket = io({ query: `name=${userName}` });
 
     this.socket.on("currentPlayers", (players) => {
       if (Object.keys(players).length !== 2) {
         waitForPlayers = true;
-        console.log("WAITING FOR OPPONENT");
         waitMessage.setText("Waiting for another player");
       } else {
         waitMessage.setText("");
@@ -150,14 +185,13 @@ export default class Pong extends Phaser.Scene implements IPong {
       waitForPlayers = true;
       this.resetAllPos();
       clearInterval(countdownTimerTimeout);
-      clearTimeout(resetTimeout);
+      clearTimeout(gameStartTimeout);
       clearInterval(syncTimer);
       waitMessage.setText("Room is full!");
     });
 
     this.socket.on("pong", function (ms) {
       latency = ms;
-      console.log(ms);
     });
 
     this.socket.on("gameStarted", (vX, vY) => {
@@ -176,14 +210,33 @@ export default class Pong extends Phaser.Scene implements IPong {
       firstPlayerId = playerId;
     });
 
+    this.socket.on("winner", (playerId) => {
+      gameRunning = false;
+      waitForPlayers = true;
+      this.resetAllPos();
+      clearInterval(countdownTimerTimeout);
+      clearTimeout(gameStartTimeout);
+      clearInterval(syncTimer);
+      countdownTimerText.setVisible(false);
+      waitMessage.setText(`${playersList[playerId].userName} won 🎉`);
+
+      restartGameBtn.setVisible(true);
+      restartGameText.setVisible(true);
+    });
+
+    this.socket.on("allReadyForRestart", () => {
+      waitMessage.setText("");
+      this.startGame();
+    })
+
     this.socket.on("pointSync", (players) => {
       for (const playerId of Object.keys(players)) {
         if (players[playerId].color === "blue") {
           scorePlayerBlue = players[playerId].score;
-          scoreTextPlayerBlue.setText("Score: " + scorePlayerBlue);
+          scoreTextPlayerBlue.setText(`${scorePlayerBlue}/${MAX_POINTS}`);
         } else {
           scorePlayerRed = players[playerId].score;
-          scoreTextPlayerRed.setText("Score: " + scorePlayerRed);
+          scoreTextPlayerRed.setText(`${scorePlayerRed}/${MAX_POINTS}`);
         }
       }
     });
@@ -193,10 +246,13 @@ export default class Pong extends Phaser.Scene implements IPong {
       waitForPlayers = true;
       this.resetAllPos();
       clearInterval(countdownTimerTimeout);
-      clearTimeout(resetTimeout);
+      clearTimeout(gameStartTimeout);
       clearInterval(syncTimer);
       waitMessage.setText("Opponent has disconnected");
-      countdownTimerText.setText("");
+      countdownTimerText.setVisible(false);
+
+      restartGameBtn.setVisible(false);
+      restartGameText.setVisible(false);
     });
 
     this.socket.on("playerMoved", (paddleY) => {
@@ -231,7 +287,7 @@ export default class Pong extends Phaser.Scene implements IPong {
     playerRed.setCollideWorldBounds(true);
 
     ball = this.physics.add.sprite(
-      this.game.canvas.width / 2,
+      centerX,
       this.game.canvas.height / 2,
       "ball"
     );
@@ -254,12 +310,14 @@ export default class Pong extends Phaser.Scene implements IPong {
       return;
     }
 
-    if (cursor.up.isDown) {
-      playersList[firstPlayerId].paddle.setVelocityY(-PADDLE_SPEED);
-    } else if (cursor.down.isDown) {
-      playersList[firstPlayerId].paddle.setVelocityY(PADDLE_SPEED);
-    } else {
-      playersList[firstPlayerId].paddle.setVelocityY(0);
+    if (gameRunning) {
+      if (cursor.up.isDown) {
+        playersList[firstPlayerId].paddle.setVelocityY(-PADDLE_SPEED);
+      } else if (cursor.down.isDown) {
+        playersList[firstPlayerId].paddle.setVelocityY(PADDLE_SPEED);
+      } else {
+        playersList[firstPlayerId].paddle.setVelocityY(0);
+      }
     }
 
     if (ball.x == this.game.canvas.width - POINT_EDGE) {
@@ -271,6 +329,12 @@ export default class Pong extends Phaser.Scene implements IPong {
           color: "red",
           score: scorePlayerRed,
         });
+
+        if (scorePlayerRed >= MAX_POINTS) {
+          this.socket.emit("gameOver", {
+            winner: firstPlayerId,
+          });
+        }
       }
     }
 
@@ -283,6 +347,12 @@ export default class Pong extends Phaser.Scene implements IPong {
           color: "blue",
           score: scorePlayerBlue,
         });
+
+        if (scorePlayerBlue >= MAX_POINTS) {
+          this.socket.emit("gameOver", {
+            winner: firstPlayerId,
+          });
+        }
       }
     }
 
@@ -313,7 +383,6 @@ export default class Pong extends Phaser.Scene implements IPong {
   }
 
   ballSync(that) {
-    console.log("BALL SYNC");
     if (ball.x > this.game.canvas.width - SYNC_MARGIN || ball.x < SYNC_MARGIN) {
       return;
     }
@@ -330,26 +399,45 @@ export default class Pong extends Phaser.Scene implements IPong {
   pointScored() {
     gameRunning = false;
     this.resetAllPos();
+    clearInterval(countdownTimerTimeout);
+    this.runCountdown();
 
-    clearTimeout(resetTimeout);
-    resetTimeout = setTimeout(() => {
+    clearTimeout(gameStartTimeout);
+    gameStartTimeout = setTimeout(() => {
       gameRunning = true;
       this.socket.emit("startParams");
     }, 3000);
   }
 
+  restartGame() {
+    scorePlayerBlue = 0;
+    scorePlayerRed = 0;
+
+    scoreTextPlayerBlue.setText(`0/${MAX_POINTS}`);
+    scoreTextPlayerRed.setText(`0/${MAX_POINTS}`);
+
+    restartGameBtn.setVisible(false);
+    restartGameText.setVisible(false);
+    waitForPlayers = true;
+
+    waitMessage.setText("Waiting for opponent");
+    this.socket.emit("restartGame", { playerId: firstPlayerId });
+  }
+
   startGame() {
     gameRunning = true;
     this.resetAllPos();
+    clearInterval(countdownTimerTimeout);
     this.runCountdown();
 
-    clearTimeout(resetTimeout);
-    resetTimeout = setTimeout(() => {
+    clearTimeout(gameStartTimeout);
+    gameStartTimeout = setTimeout(() => {
       this.socket.emit("startParams");
     }, 3000);
   }
 
   runCountdown() {
+    countdownTimerText.setVisible(true);
     countdownTimerCount = 3;
     countdownTimerText.setText(countdownTimerCount.toString());
 
