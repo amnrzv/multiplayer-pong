@@ -4,7 +4,7 @@ import Menu from "./menu";
 
 const PADDLE_SPEED = 300;
 const BALL_SPEED_INCREMENTS = 50;
-const SYNC_FREQ = 200;
+const SYNC_FREQ = 800;
 const SYNC_MARGIN = 200;
 const POINT_EDGE = 4;
 const PADDLE_POS = 20;
@@ -191,6 +191,7 @@ export default class Pong extends Phaser.Scene implements IPong {
 
     this.socket.on("pong", (ms) => {
       latency = ms;
+      console.info("PING: ", ms)
     });
 
     this.socket.on("gameStarted", (vX, vY) => {
