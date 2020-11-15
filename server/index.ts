@@ -48,8 +48,6 @@ io.on("connection", (socket) => {
     playersWithRooms[roomId][playerId].score = 0;
   }
 
-  // console.log("PLAYERS", playersWithRooms[roomId]);
-
   // send the id back to the client
   socket.emit("playerCreated", socket.id);
 

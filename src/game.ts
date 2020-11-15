@@ -6,8 +6,8 @@ const PADDLE_SPEED = 300;
 const BALL_SPEED_INCREMENTS = 50;
 const SYNC_FREQ = 800;
 const SYNC_MARGIN = 200;
-const POINT_EDGE = 4;
-const PADDLE_POS = 50;
+const POINT_EDGE = 12;
+const PADDLE_POS = 40;
 const BALL_MAX_SPEED = 500;
 const MAX_POINTS = 10;
 
@@ -61,22 +61,20 @@ export default class Pong extends Phaser.Scene implements IPong {
   }
 
   preload() {
-    this.load.image("ground", "assets/ground.png");
     this.load.image("player", "assets/player.png");
-    this.load.image("pc", "assets/pc.png");
     this.load.image("ball", "assets/ball.png");
   }
 
   create() {
     const centerX = this.game.canvas.width / 2;
-    playerNameRed = this.add.text(40, 16, "PLAYER 1", {
+    playerNameRed = this.add.text(60, 16, "PLAYER 1", {
       fontFamily: "Roboto, sans-serif",
       fontSize: "24px",
       fill: "#FFF",
     });
 
     playerNameBlue = this.add
-      .text(this.game.canvas.width - 40, 16, "PLAYER 2", {
+      .text(this.game.canvas.width - 60, 16, "PLAYER 2", {
         fontFamily: "Roboto, sans-serif",
         fontSize: "24px",
         fill: "#FFF",
@@ -289,14 +287,13 @@ export default class Pong extends Phaser.Scene implements IPong {
     playerRed = this.physics.add.sprite(
       PADDLE_POS,
       this.game.canvas.height / 2,
-      "pc"
+      "player"
     );
     playerRed.setImmovable(true);
     playerRed.setCollideWorldBounds(true);
 
     ball = this.physics.add
-      .sprite(centerX, this.game.canvas.height / 2, "ball")
-      .setOrigin(0.5);
+      .sprite(centerX, this.game.canvas.height / 2, "ball");
 
     ball.setCollideWorldBounds(true);
     ball.setBounce(1);
@@ -325,7 +322,7 @@ export default class Pong extends Phaser.Scene implements IPong {
       }
     }
 
-    if (ball.x === this.game.canvas.width - POINT_EDGE) {
+    if (ball.x > this.game.canvas.width - POINT_EDGE) {
       if (playersList[firstPlayerId].color === "blue") {
         scorePlayerRed += 1;
         this.pointScored();
@@ -342,7 +339,7 @@ export default class Pong extends Phaser.Scene implements IPong {
       }
     }
 
-    if (ball.x === POINT_EDGE) {
+    if (ball.x < POINT_EDGE) {
       if (playersList[firstPlayerId].color === "red") {
         scorePlayerBlue += 1;
         this.pointScored();
@@ -372,7 +369,6 @@ export default class Pong extends Phaser.Scene implements IPong {
   }
 
   hitPaddleRed() {
-    console.log("RED HIT");
     this.hitPaddle();
     if (playersList[firstPlayerId].color === "red") {
       this.socket.emit("ballMove", ball.x, ball.y, velocityX, velocityY);
@@ -380,7 +376,6 @@ export default class Pong extends Phaser.Scene implements IPong {
   }
 
   hitPaddleBlue() {
-    console.log("BLUE HIT");
     this.hitPaddle();
     if (playersList[firstPlayerId].color === "blue") {
       this.socket.emit("ballMove", ball.x, ball.y, velocityX, velocityY);
