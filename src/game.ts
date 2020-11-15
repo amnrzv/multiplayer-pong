@@ -189,10 +189,10 @@ export default class Pong extends Phaser.Scene implements IPong {
       waitMessage.setText("Room is full!");
     });
 
-    // this.socket.on("pong", (ms) => {
-    //   latency = ms;
-    //   console.info("PING: ", ms)
-    // });
+    this.socket.on("pong", (ms) => {
+      latency = ms;
+      console.info("PING: ", ms)
+    });
 
     this.socket.on("gameStarted", (vX, vY) => {
       velocityX = vX;
@@ -201,9 +201,9 @@ export default class Pong extends Phaser.Scene implements IPong {
       ball.setVelocityY(vY);
 
       clearInterval(syncTimer);
-      // if (playersList[firstPlayerId].color === "red") {
-      //   syncTimer = setInterval(() => this.ballSync(this), SYNC_FREQ);
-      // }
+      if (playersList[firstPlayerId].color === "red") {
+        syncTimer = setInterval(() => this.ballSync(this), SYNC_FREQ);
+      }
     });
 
     this.socket.on("playerCreated", (playerId) => {
