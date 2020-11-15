@@ -9,7 +9,7 @@ const SYNC_MARGIN = 200;
 const POINT_EDGE = 12;
 const PADDLE_POS = 40;
 const BALL_MAX_SPEED = 500;
-const MAX_POINTS = 10;
+const MAX_POINTS = 2;
 
 let cursor;
 let playerBlue;
@@ -224,10 +224,7 @@ export default class Pong extends Phaser.Scene implements IPong {
 
     this.socket.on("allReadyForRestart", () => {
       waitMessage.setText("");
-
-      if (playersList[firstPlayerId].color === "red") {
-        this.startGame();
-      }
+      this.startGame();
     });
 
     this.socket.on("pointSync", (players) => {

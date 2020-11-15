@@ -71,6 +71,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("gameOver", ({ winner }) => {
+    playersInThisRoom = Object.keys(playersWithRooms[roomId]);
+
     playersInThisRoom.forEach((id) => {
       playersWithRooms[roomId][id].score = 0;
       playersWithRooms[roomId][id].restart = false;
@@ -79,6 +81,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("restartGame", ({ playerId }) => {
+    playersInThisRoom = Object.keys(playersWithRooms[roomId]);
     playersWithRooms[roomId][playerId].restart = true;
 
     console.log(playersInThisRoom);
