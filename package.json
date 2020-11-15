@@ -1,46 +1,39 @@
 {
-    "name": "phaser3-typescript-project-template",
-    "version": "1.0.2",
-    "description": "A Phaser 3 Project Template using Rollup and TypeScript",
-    "main": "src/game.ts",
-    "scripts": {
-        "dev:client": "rollup --config rollup.client.dev.js",
-        "watch:client": "rollup --watch --config rollup.client.dev.js",
-        "build:client": "rollup --config rollup.client.dist.js",
-        "build:server": "rollup --config rollup.server.dist.js",
-        "start-server": "ts-node-dev ./server/index.ts",
-        "start-dev": "concurrently --kill-others \"npm run watch\" \"npm run start-server\"",
-        "build": "npm run build:client && npm run build:server",
-        "start": "node ./dist/server.js"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/photonstorm/phaser3-typescript-project-template.git"
-    },
-    "author": "Richard Davey <rich@photonstorm.com> (http://www.photonstorm.com)",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/photonstorm/phaser3-typescript-project-template/issues"
-    },
-    "homepage": "https://github.com/photonstorm/phaser3-typescript-project-template#readme",
-    "dependencies": {
-        "express": "^4.17.1",
-        "phaser3-rex-plugins": "^1.1.31",
-        "socket.io": "^2.3.0",
-        "socket.io-client": "^2.3.0",
-        "uuid": "^8.3.1"
-    },
-    "devDependencies": {
-        "@rollup/plugin-replace": "^2.3.0",
-        "concurrently": "^5.3.0",
-        "phaser": "^3.22.0",
-        "rollup": "^1.29.0",
-        "rollup-plugin-commonjs": "^10.1.0",
-        "rollup-plugin-node-resolve": "^5.2.0",
-        "rollup-plugin-serve": "^1.0.1",
-        "rollup-plugin-typescript2": "^0.25.3",
-        "rollup-plugin-uglify": "^6.0.4",
-        "ts-node-dev": "^1.0.0",
-        "typescript": "^3.7.4"
-    }
+  "name": "multiplayer-pong",
+  "version": "1.0.2",
+  "description": "A Phaser 3 Multiplayer Pong Game",
+  "main": "src/game.ts",
+  "scripts": {
+    "dev:client": "rollup --config rollup.client.dev.js",
+    "watch:client": "rollup --watch --config rollup.client.dev.js",
+    "build:client": "rollup --config rollup.client.dist.js",
+    "build:server": "rollup --config rollup.server.dist.js",
+    "start-server": "ts-node-dev ./server/index.ts",
+    "start-dev": "concurrently --kill-others \"npm run watch\" \"npm run start-server\"",
+    "build": "npm run build:client && npm run build:server",
+    "start": "node ./dist/server.js"
+  },
+  "repository": {
+    "type": "git"
+  },
+  "author": "Amaan Rizvi",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0",
+    "socket.io-client": "^2.3.0"
+  },
+  "devDependencies": {
+    "phaser3-rex-plugins": "^1.1.31",
+    "@rollup/plugin-replace": "^2.3.0",
+    "concurrently": "^5.3.0",
+    "phaser": "^3.22.0",
+    "rollup": "^1.29.0",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-serve": "^1.0.1",
+    "rollup-plugin-typescript2": "^0.25.3",
+    "rollup-plugin-uglify": "^6.0.4",
+    "ts-node-dev": "^1.0.0",
+    "typescript": "^3.7.4"
+  }
 }
