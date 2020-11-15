@@ -170,30 +170,6 @@ export default class Pong extends Phaser.Scene implements IPong {
           }
         }
         playersList = players;
-
-        if (playersList[firstPlayerId].color === "red") {
-          console.log("HERE2");
-
-          this.physics.add.collider(
-            ball,
-            playerBlue,
-            this.hitPaddleRed,
-            null,
-            this
-          );
-        }
-
-        if (playersList[firstPlayerId].color === "blue") {
-          console.log("HERE3");
-
-          this.physics.add.collider(
-            ball,
-            playerRed,
-            this.hitPaddleBlue,
-            null,
-            this
-          );
-        }
       }
 
       if (firstPlayerId && players[firstPlayerId].color === "red") {
@@ -324,6 +300,9 @@ export default class Pong extends Phaser.Scene implements IPong {
 
     ball.setCollideWorldBounds(true);
     ball.setBounce(1);
+
+    this.physics.add.collider(ball, playerRed, this.hitPaddleRed, null, this);
+    this.physics.add.collider(ball, playerBlue, this.hitPaddleBlue, null, this);
   }
 
   update() {
