@@ -11,48 +11,47 @@ const PADDLE_POS = 20;
 const BALL_MAX_SPEED = 500;
 const MAX_POINTS = 10;
 
-var cursor;
-var playerBlue;
-var playerRed;
+let cursor;
+let playerBlue;
+let playerRed;
+let ball;
 
-var ball;
+let velocityX;
+let velocityY;
 
-var velocityX;
-var velocityY;
+let scorePlayerBlue = 0;
+let scorePlayerRed = 0;
+let waitForPlayers = true;
+let gameRunning = false;
+let firstPlayerId;
+let opponentId;
+let playersList = {};
+let userName;
 
-var scorePlayerBlue = 0;
-var scorePlayerRed = 0;
-var waitForPlayers = true;
-var gameRunning = false;
-var firstPlayerId;
-var opponentId;
-var playersList = {};
-var userName;
+let latency;
+let syncTimer;
+let gameStartTimeout;
 
-var latency;
-var syncTimer;
-var gameStartTimeout;
+let waitMessage;
 
-var waitMessage;
-var countdownTimerTimeout;
-var countdownTimerCount = 3;
-var countdownTimerText;
-var playerNameRed;
-var playerNameBlue;
-var scoreTextPlayerRed;
-var scoreTextPlayerBlue;
+let countdownTimerTimeout;
+let countdownTimerCount = 3;
+let countdownTimerText;
+
+let playerNameRed;
+let playerNameBlue;
+let scoreTextPlayerRed;
+let scoreTextPlayerBlue;
 
 let restartGameBtn;
 let restartGameText;
 
 interface IPong {
   socket: any;
-  userName: string;
 }
 
 export default class Pong extends Phaser.Scene implements IPong {
   socket;
-  userName;
   constructor() {
     super("pong");
   }
@@ -190,7 +189,7 @@ export default class Pong extends Phaser.Scene implements IPong {
       waitMessage.setText("Room is full!");
     });
 
-    this.socket.on("pong", function (ms) {
+    this.socket.on("pong", (ms) => {
       latency = ms;
     });
 
@@ -259,7 +258,7 @@ export default class Pong extends Phaser.Scene implements IPong {
       playersList[opponentId].paddle.y = paddleY;
     });
 
-    this.socket.on("ballMoved", function (pX, pY, vX, vY) {
+    this.socket.on("ballMoved", (pX, pY, vX, vY) => {
       ball.x = pX;
       ball.y = pY;
       velocityX = vX;
