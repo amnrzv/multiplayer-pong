@@ -6,7 +6,7 @@ const PADDLE_SPEED = 300;
 const BALL_SPEED_INCREMENTS = 50;
 const SYNC_FREQ = 800;
 const SYNC_MARGIN = 200;
-const POINT_EDGE = 2;
+const POINT_EDGE = 4;
 const PADDLE_POS = 20;
 const BALL_MAX_SPEED = 500;
 const MAX_POINTS = 10;
@@ -329,9 +329,8 @@ export default class Pong extends Phaser.Scene implements IPong {
     }
 
     if (ball.x == this.game.canvas.width - POINT_EDGE) {
-      scorePlayerRed += 1;
-
       if (playersList[firstPlayerId].color === "red") {
+        scorePlayerRed += 1;
         this.pointScored();
         this.socket.emit("pointScored", {
           color: "red",
@@ -347,9 +346,8 @@ export default class Pong extends Phaser.Scene implements IPong {
     }
 
     if (ball.x == POINT_EDGE) {
-      scorePlayerBlue += 1;
-
       if (playersList[firstPlayerId].color === "blue") {
+        scorePlayerBlue += 1;
         this.pointScored();
         this.socket.emit("pointScored", {
           color: "blue",
