@@ -123,12 +123,12 @@ export default class Pong extends Phaser.Scene implements IPong {
             players[playerId].color = "blue";
             players[playerId].paddle = playerBlue;
             playerNameBlue.setText(players[playerId].userName);
-            scorePlayerBlue = playersList[playerId].score;
+            scorePlayerBlue = players[playerId].score;
           } else {
             players[playerId].color = "red";
             players[playerId].paddle = playerRed;
             playerNameRed.setText(players[playerId].userName);
-            scorePlayerRed = playersList[playerId].score;
+            scorePlayerRed = players[playerId].score;
           }
 
           if (playerId !== firstPlayerId) {
@@ -179,15 +179,13 @@ export default class Pong extends Phaser.Scene implements IPong {
     this.socket.on("pointSync", (players) => {
       for (const playerId of Object.keys(players)) {
         if (players[playerId].color === "blue") {
-          scorePlayerBlue = playersList[playerId].score;
+          scorePlayerBlue = players[playerId].score;
           scoreTextPlayerBlue.setText("Score: " + scorePlayerBlue);
         } else {
-          scorePlayerRed = playersList[playerId].score;
+          scorePlayerRed = players[playerId].score;
           scoreTextPlayerRed.setText("Score: " + scorePlayerRed);
         }
       }
-
-      playersList = players;
     });
 
     this.socket.on("disconnect", () => {
@@ -280,7 +278,6 @@ export default class Pong extends Phaser.Scene implements IPong {
       scorePlayerBlue += 1;
 
       this.pointScored();
-
       if (playersList[firstPlayerId].color === "blue") {
         this.socket.emit("pointScored", {
           color: "blue",
