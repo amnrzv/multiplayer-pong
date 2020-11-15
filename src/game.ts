@@ -177,6 +177,27 @@ export default class Pong extends Phaser.Scene implements IPong {
       } else {
         playerNameBlue.setText(userName);
       }
+
+      //in createGame()
+      if (playersList[firstPlayerId].color === "red") {
+        this.physics.add.collider(
+          ball,
+          playerBlue,
+          this.hitPaddleRed,
+          null,
+          this
+        );
+      }
+
+      if (playersList[firstPlayerId].color === "blue") {
+        this.physics.add.collider(
+          ball,
+          playerRed,
+          this.hitPaddleBlue,
+          null,
+          this
+        );
+      }
     });
 
     this.socket.on("roomFull", () => {
@@ -294,18 +315,12 @@ export default class Pong extends Phaser.Scene implements IPong {
     playerRed.setImmovable(true);
     playerRed.setCollideWorldBounds(true);
 
-    ball = this.physics.add.sprite(
-      centerX,
-      this.game.canvas.height / 2,
-      "ball"
-    );
+    ball = this.physics.add
+      .sprite(centerX, this.game.canvas.height / 2, "ball")
+      .setOrigin(0.5);
 
     ball.setCollideWorldBounds(true);
     ball.setBounce(1);
-
-    //in createGame()
-    this.physics.add.collider(ball, playerBlue, this.hitPaddleRed, null, this);
-    this.physics.add.collider(ball, playerRed, this.hitPaddleBlue, null, this);
   }
 
   update() {
@@ -328,7 +343,7 @@ export default class Pong extends Phaser.Scene implements IPong {
       }
     }
 
-    if (ball.x == this.game.canvas.width - POINT_EDGE) {
+    if (ball.x === this.game.canvas.width - POINT_EDGE) {
       if (playersList[firstPlayerId].color === "blue") {
         scorePlayerRed += 1;
         this.pointScored();
@@ -345,7 +360,7 @@ export default class Pong extends Phaser.Scene implements IPong {
       }
     }
 
-    if (ball.x == POINT_EDGE) {
+    if (ball.x === POINT_EDGE) {
       if (playersList[firstPlayerId].color === "red") {
         scorePlayerBlue += 1;
         this.pointScored();
@@ -375,6 +390,7 @@ export default class Pong extends Phaser.Scene implements IPong {
   }
 
   hitPaddleRed() {
+    console.log("RED HIT");
     this.hitPaddle();
     if (playersList[firstPlayerId].color === "red") {
       this.socket.emit("ballMove", ball.x, ball.y, velocityX, velocityY);
@@ -382,6 +398,7 @@ export default class Pong extends Phaser.Scene implements IPong {
   }
 
   hitPaddleBlue() {
+    console.log("BLUE HIT");
     this.hitPaddle();
     if (playersList[firstPlayerId].color === "blue") {
       this.socket.emit("ballMove", ball.x, ball.y, velocityX, velocityY);
