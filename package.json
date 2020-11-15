@@ -7,8 +7,8 @@
         "dev": "rollup --config rollup.config.dev.js",
         "build": "rollup --config rollup.config.dist.js",
         "watch": "rollup --watch --config rollup.config.dev.js",
-        "start-server": "ts-node-dev ./server/index.ts",
-        "start": "concurrently --kill-others \"npm run watch\" \"npm run start-server\""
+        "start": "ts-node-dev ./server/index.ts",
+        "start-dev-server": "concurrently --kill-others \"npm run watch\" \"npm run start-server\""
     },
     "repository": {
         "type": "git",
