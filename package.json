@@ -9,7 +9,7 @@
     "build:client": "rollup --config rollup.client.dist.js",
     "build:server": "rollup --config rollup.server.dist.js",
     "start-server": "ts-node-dev ./server/index.ts",
-    "start-dev": "concurrently --kill-others \"npm run watch\" \"npm run start-server\"",
+    "start-dev": "concurrently --kill-others \"npm run watch:client\" \"npm run start-server\"",
     "build": "npm run build:client && npm run build:server",
     "start": "node ./dist/server.js"
   },
